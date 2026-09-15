@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Editor</title>
+  <style>
+    :root {
+      --err: red;
+      --warn: yellow;
+      --info: skyblue;
+      --brand: #3458bb;
+    }
+
+    body {
+      margin: 0;
+      font-family: Consolas, "Courier New", monospace;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+    }
+
+    header {
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 15px;
+      background-color: #252526;
+      border-bottom: 1px solid #333;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+    }
+
+    header .brand {
+      font-weight: bold;
+      color: #61dafb;
+    }
+
+    header .highlight {
+      background-color: #007acc;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    header .btns {
+      display: flex;
+      gap: 10px;
+    }
+
+    header button {
+      background: transparent;
+      border: none;
+      color: #d4d4d4;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    header #loadBtn {
+      margin-right: 50px;
+    }
+
+    header button:hover {
+      color: #61dafb;
+    }
+
+    main {
+      margin-top: 60px;
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 15px;
+      padding: 15px;
+    }
+
+    .card {
+      background-color: #252526;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 12px;
+    }
+
+    textarea {
+      width: 95%;
+      height: 120px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border: 1px solid #555;
+      border-radius: 3px;
+      padding: 8px;
+      resize: vertical;
+      font-family: Consolas, monospace;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      padding: 8px 12px;
+      cursor: pointer;
+      background-color: #2d2d2d;
+      border: none;
+      color: #d4d4d4;
+    }
+
+    .tab.active {
+      background-color: #1e1e1e;
+      color: #61dafb;
+      border-bottom: 2px solid #007acc;
+    }
+
+    .editor-wrap {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .editor-wrap.active {
+      display: block;
+    }
+
+    .editor {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      height: 300px;
+      padding: 8px;
+      color: #d4d4d4;
+    }
+
+    iframe.preview {
+      width: 100%;
+      height: 200px;
+      border: 1px solid #333;
+      background: #fff;
+      margin-top: 10px;
+    }
+
+    .btn {
+      padding: 6px 10px;
+      border-radius: 3px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-top: 5px;
+    }
+
+    .btn.ok {
+      background-color: #007acc;
+      color: #fff;
+    }
+
+    .btn.ok:hover {
+      background-color: #005a9e;
+    }
+
+    .btn.warn {
+      background-color: #d16969;
+      color: #fff;
+    }
+
+    .btn.secondary {
+      background-color: #3c3c3c;
+      color: #d4d4d4;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .statusbar {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      background: #007acc;
+      color: #fff;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 3px;
+    }
+
+    .status-left, .status-right {
+      display: flex;
+      gap: 15px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: #252526;
+      border-top: 1px solid #333;
+      color: #888;
+      font-size: 0.8rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Code <span class="highlight">Editor</span></div>
+    <div class="btns">
+      <button id="saveBtn" title="Save Code">Save</button>
+      <button id="loadBtn" title="Load Code">Load</button>
+      <input type="file" id="openFile" accept="application/json" hidden>
+    </div>
+  </header>
+
+  <main>
+    <!-- Task Panel -->
+    <aside class="card">
+      <h2>Task</h2>
+      <textarea id="assignment" placeholder="Write the task description here..."></textarea>
+      <label for="testArea">Validation tests (optional)</label>
+      <textarea id="testArea" placeholder="Write simple JS tests..."></textarea>
+      <p class="muted">Tip: Ctrl+S to save, Ctrl+Enter to run.</p>
+    </aside>
+
+    <!-- Code Editor with Tabs -->
+    <section class="card">
+      <div id="webEditors">
+        <h2>Editor</h2>
+        <div class="tabs" id="webTabs" role="tablist" aria-label="web editors">
+          <button class="tab active" aria-selected="true" tabindex="0" data-pane="html">HTML</button>
+          <button class="tab" aria-selected="false" tabindex="-1" data-pane="css">CSS</button>
+          <button class="tab" aria-selected="false" tabindex="-1" data-pane="js">JS</button>
+        </div>
+ 
+        <div class="editor-wrap active" id="pane-html" data-pane="html">
+          <div class="editor" id="ed_html"></div>
+        </div>
+        <div class="editor-wrap" id="pane-css" data-pane="css">
+          <div class="editor" id="ed_css"></div>
+        </div>
+        <div class="editor-wrap" id="pane-js" data-pane="js">
+          <div class="editor" id="ed_js"></div>
+        </div>
+ 
+        <div class="row">
+          <button class="btn ok" id="runWeb">▶ Run Code</button>
+          <button class="btn secondary" id="openPreview">Preview</button>
+        </div>
+      </div>
+      <iframe class="preview" sandbox="allow-scripts allow-modals allow-same-origin allow-forms" id="preview"></iframe>
+    </section>
+
+    <!-- Output Panel -->
+    <aside class="card">
+      <h2>Output</h2>
+      <div id="output" aria-live="polite" style="height:150px; background:#1e1e1e; border:1px solid #333; padding:10px; overflow-y:auto;"></div>
+      <div class="row">
+        <button class="btn warn" id="runTest">Run Test</button>
+        <button class="btn secondary" id="clearOut">Clear Log</button>
+      </div>
+      <h3>Notes</h3>
+      <ul class="muted">
+        <li>Code runs inside browser sandbox</li>
+        <li>Supports HTML, CSS, and JS</li>
+        <li>Preview updates instantly</li>
+      </ul>
+    </aside>
+
+    <div class="statusbar">
+      <div class="status-left">
+        <span id="cursorPos">Ln 1, Col 1</span>
+        <span>Spaces: 2</span>
+        <span>UTF-8</span>
+      </div>
+      <div class="status-right">
+        <span id="langMode">HTML</span>
+        <span id="fileName">index.html</span>
+        <span>main ⬤</span>
+        <span id="diagnostics">0 errors | 0 warnings</span>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    © 2026 Code Editor | Inspired by VS Code
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.43.3/ace.js" integrity="sha512-T2otaV2NuxAJAOCoj8ijyy+eAAadZlpvdLmakrIGVFbBkthgIFqLTXd+T8Z+S+kf4V7Ib5+6f6r4D4IdS9Ey4A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="scripts.js"></script>
+</body>
+</html>
